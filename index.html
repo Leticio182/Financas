@@ -78,6 +78,32 @@ h2{font-size:15px;margin:0 0 10px}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .sheet{background:var(--card);color:var(--text);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:100%;overflow-y:auto}
 .ghost{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:600}
+main{padding-bottom:96px}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:32px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.35);z-index:40;display:none}
+.fill.warn{background:#d97706}.fill.over{background:#dc2626}
+.alert{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.alert:first-child{border-top:0}
+.alert .pay{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:13px}
+.cmp{font-size:11px;color:var(--muted);min-height:14px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.filters input{grid-column:1/-1}
+.filters input,.filters select{margin-bottom:0}
+details.card summary{cursor:pointer;font-weight:600}
+details.card[open] summary{margin-bottom:10px}
+details.sub summary{cursor:pointer;color:var(--accent);font-size:14px;margin-top:8px}
+.mrow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);font-size:14px}
+.mrow:first-child{border-top:0}
+.mrow .nm{flex:1;min-width:0}
+.mrow .nm small{display:block;color:var(--muted)}
+.mrow input{width:96px;margin:0;padding:7px}
+.mrow button{background:none;border:0;color:var(--muted);font-size:16px;padding:4px 6px}
+.inline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.inline input,.inline select{margin-bottom:0}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:6px 0}
+.chk input{width:auto;margin:0}
+.tag{font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:6px;color:var(--muted)}
+.sheet h2{margin-top:0}
+.small{padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;width:100%}
 </style>
 </head>
 <body>
@@ -104,6 +130,11 @@ h2{font-size:15px;margin:0 0 10px}
     </div>
     <div class="who"><span id="who"></span><button class="link" id="signout">Sair</button></div>
 
+    <div class="card" id="alertbox" style="display:none">
+      <h2>Avisos</h2>
+      <div id="alerts"></div>
+    </div>
+
     <div class="card" id="importbox" style="display:none">
       <h2>Importar dados deste aparelho</h2>
       <p class="note">Encontrei <b id="importn">0</b> lançamentos salvos só neste aparelho (da versão anterior). Importe uma vez para que os dois vejam.</p>
@@ -119,28 +150,34 @@ h2{font-size:15px;margin:0 0 10px}
 
     <div class="card sum">
       <div class="full"><div class="lbl">Saldo do mês</div><div class="val" id="bal"></div></div>
-      <div><div class="lbl">Salário</div><div class="val inc" id="inc"></div></div>
-      <div><div class="lbl">Despesas</div><div class="val exp" id="exp"></div></div>
+      <div><div class="lbl">Salário</div><div class="val inc" id="inc"></div><div class="cmp" id="inc-cmp"></div></div>
+      <div><div class="lbl">Despesas</div><div class="val exp" id="exp"></div><div class="cmp" id="exp-cmp"></div></div>
     </div>
 
     <div class="card">
-      <div class="seg">
-        <button id="t-exp" class="on">Despesa</button>
-        <button id="t-inc">Salário</button>
-      </div>
-      <input id="amount" type="text" inputmode="decimal" placeholder="Valor (ex.: 25,90)" autocomplete="off">
-      <input id="desc" type="text" placeholder="Descrição (opcional)" autocomplete="off">
-      <div class="row">
-        <select id="cat"></select>
-        <input id="date" type="date">
-      </div>
-      <p class="err" id="err"></p>
-      <button class="add" id="add">Adicionar</button>
+      <h2>Contas e cartões</h2>
+      <div id="acclist"></div>
+      <details class="sub">
+        <summary>Adicionar conta ou cartão</summary>
+        <div style="margin-top:8px">
+          <input id="a-name" type="text" placeholder="Nome (ex.: Nubank, Carteira)" autocomplete="off">
+          <div class="inline">
+            <select id="a-kind"><option value="conta">Conta</option><option value="cartao">Cartão de crédito</option></select>
+            <input id="a-ini" type="text" inputmode="decimal" placeholder="Saldo inicial (só conta)" autocomplete="off">
+          </div>
+          <button class="add" id="a-add">Adicionar</button>
+        </div>
+      </details>
     </div>
 
     <div class="card" id="catcard">
       <h2>Despesas por categoria</h2>
       <div id="cats"></div>
+    </div>
+
+    <div class="card">
+      <h2>Por pessoa no mês</h2>
+      <div id="ppl"></div>
     </div>
 
     <div class="card" id="repcard">
@@ -160,15 +197,48 @@ h2{font-size:15px;margin:0 0 10px}
     </div>
 
     <div class="card">
-      <h2>Lançamentos</h2>
+      <h2>Lançamentos <span class="note" id="lcount"></span></h2>
+      <div class="filters">
+        <input id="f-q" type="text" placeholder="Buscar por descrição ou categoria" autocomplete="off">
+        <select id="f-cat"></select>
+        <select id="f-who"></select>
+        <select id="f-acct"></select>
+      </div>
       <div id="list"></div>
     </div>
+
+    <details class="card">
+      <summary>Categorias e metas</summary>
+      <div class="seg" style="margin-bottom:8px">
+        <button id="cm-exp" class="on">Despesas</button>
+        <button id="cm-inc">Salário</button>
+      </div>
+      <p class="note" id="cm-note">Defina uma meta mensal (R$) por categoria. O app avisa quando passar.</p>
+      <div id="cm-list"></div>
+      <div class="inline" style="margin-top:10px">
+        <input id="cm-new" type="text" placeholder="Nova categoria" autocomplete="off">
+        <button class="small" id="cm-add" style="width:auto;white-space:nowrap">Adicionar</button>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Lançamentos recorrentes</summary>
+      <p class="note">Criados pelo botão + com a opção "Repetir todo mês". Entram sozinhos a cada mês.</p>
+      <div id="rec-list"></div>
+    </details>
+
+    <details class="card">
+      <summary>Mais opções</summary>
+      <button class="small" id="exp-csv">Exportar todos os lançamentos (CSV)</button>
+    </details>
   </div>
 </main>
 
+<button class="fab" id="fab" aria-label="Novo lançamento">+</button>
+
 <div class="ov" id="ov">
   <div class="sheet">
-    <h2>Editar lançamento</h2>
+    <h2 id="s-title">Novo lançamento</h2>
     <div class="seg">
       <button id="e-exp" class="on">Despesa</button>
       <button id="e-inc">Salário</button>
@@ -177,7 +247,17 @@ h2{font-size:15px;margin:0 0 10px}
     <input id="e-desc" type="text" placeholder="Descrição (opcional)" autocomplete="off">
     <div class="row">
       <select id="e-cat"></select>
-      <input id="e-date" type="date">
+      <select id="e-acct"></select>
+    </div>
+    <input id="e-date" type="date">
+    <label class="chk" id="e-paidwrap"><input type="checkbox" id="e-paid" checked> Já pago</label>
+    <div id="e-addonly">
+      <div class="inline">
+        <label class="note" for="e-inst" style="white-space:nowrap;margin:0">Parcelas (x)</label>
+        <input id="e-inst" type="number" min="1" max="48" value="1" inputmode="numeric">
+      </div>
+      <p class="note" id="e-instnote"></p>
+      <label class="chk"><input type="checkbox" id="e-rec"> Repetir todo mês (recorrente)</label>
     </div>
     <p class="err" id="e-err"></p>
     <div class="row">
@@ -190,7 +270,7 @@ h2{font-size:15px;margin:0 0 10px}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, setDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCxJ2z4IFq5TuOnkRDzJhec3G8EGdjd7Ok",
@@ -210,53 +290,108 @@ try {
   db = getFirestore(app);
 }
 
-const COL = 'transactions';
-const OLD_KEY = 'financas:v1';
-const IMPORTED_KEY = 'financas:imported';
-const CATS = { exp: ['Alimentação','Moradia','Transporte','Saúde','Lazer','Educação','Outros'], inc: ['Salário','Extra','Outros'] };
+const COL = 'transactions', RECCOL = 'recurring';
+const OLD_KEY = 'financas:v1', IMPORTED_KEY = 'financas:imported', LASTCAT_KEY = 'financas:lastcat';
+const DEF = {
+  catsExp: ['Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Lazer', 'Educação', 'Outros'],
+  catsInc: ['Salário', 'Extra', 'Outros'],
+  goals: [],
+  accts: []
+};
+const clone = (o) => JSON.parse(JSON.stringify(o));
 
-let tx = [], type = 'exp', cur = new Date(), period = 6, user = null, unsub = null, pending = false;
+let tx = [], rec = [], S = clone(DEF), cur = new Date(), period = 6, user = null, unsub = null;
+let pending = false, gen = false, cmTp = 'exp', editing = null, etype = 'exp';
 cur.setDate(1);
 
+// <helpers>
 const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, '0');
+const fmt = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => fmt(new Date());
+const ym = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1);
+const round2 = (n) => Math.round(n * 100) / 100;
+function nextYm(s) { const p = s.split('-').map(Number); return ym(new Date(p[0], p[1], 1)); }
+function dateIn(m, day) { const p = m.split('-').map(Number); const dim = new Date(p[0], p[1], 0).getDate(); return m + '-' + pad(Math.min(day, dim)); }
+function addM(ds, i) { const p = ds.split('-').map(Number); const dim = new Date(p[0], p[1] + i, 0).getDate(); return fmt(new Date(p[0], p[1] - 1 + i, Math.min(p[2], dim))); }
+function parseMoney(s) { s = String(s).trim().replace(/[R$\s]/g, ''); if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.'); return parseFloat(s); }
+function splitInst(total, n) { const tc = Math.round(total * 100), bc = Math.floor(tc / n); const out = []; for (let i = 0; i < n; i++) out.push((i === n - 1 ? tc - bc * (n - 1) : bc) / 100); return out; }
+// </helpers>
+
 const brl = (n) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const num = (n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ym = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 const mname = (d) => d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
 const mlab = (d) => mname(d) + '/' + String(d.getFullYear()).slice(2);
-const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 const firstName = (u) => String(u.displayName || u.email || '').split(' ')[0];
+const catsOf = (tp) => (tp === 'inc' ? S.catsInc : S.catsExp);
+const goalsMap = () => { const m = {}; S.goals.forEach((g) => { m[g.cat] = g.limit; }); return m; };
+const monthTx = () => { const m = ym(cur); return tx.filter((t) => t.date.indexOf(m) === 0); };
+const acctName = (id) => { const a = S.accts.find((x) => x.id === id); return a ? a.name : ''; };
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function opt(sel, v, t) { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); }
+function btn(txt, label, fn) { const b = document.createElement('button'); b.textContent = txt; b.setAttribute('aria-label', label); b.onclick = fn; return b; }
 function show(w) {
   ['boot', 'login', 'denied'].forEach((k) => { $(k).style.display = (k === w ? 'block' : 'none'); });
   $('app').style.display = (w === 'app' ? 'block' : 'none');
+  $('fab').style.display = (w === 'app' ? 'block' : 'none');
 }
-function setSync() {
-  $('sync').textContent = !navigator.onLine ? '📴 Offline' : (pending ? '⏳ Sincronizando…' : '✓ Sincronizado');
+function setSync() { $('sync').textContent = !navigator.onLine ? '📴 Offline' : (pending ? '⏳ Sincronizando…' : '✓ Sincronizado'); }
+function err(e, msg) { alert(msg + ' (' + ((e && e.code) || 'erro') + ').'); }
+async function commitAll(ops) {
+  for (let i = 0; i < ops.length; i += 400) {
+    const b = writeBatch(db);
+    ops.slice(i, i + 400).forEach((o) => {
+      if (o.set) b.set(o.ref, o.set); else if (o.upd) b.update(o.ref, o.upd); else if (o.del) b.delete(o.ref);
+    });
+    await b.commit();
+  }
 }
 
+/* ---------- Seletores ---------- */
 function fillSel(sel, tp, val) {
   sel.innerHTML = '';
-  const lista = CATS[tp].slice();
+  const lista = catsOf(tp).slice();
   if (val && lista.indexOf(val) < 0) lista.push(val);
-  lista.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+  lista.forEach((c) => opt(sel, c, c));
   if (val) sel.value = val;
 }
-function fillCats() { fillSel($('cat'), type); }
+function fillAcct(sel, val) {
+  sel.innerHTML = ''; opt(sel, '', '(sem conta)');
+  S.accts.forEach((a) => opt(sel, a.id, a.name + (a.kind === 'cartao' ? ' (cartão)' : '')));
+  sel.value = val || '';
+}
+function fillFilters() {
+  const keep = (id, build) => { const s = $(id), v = s.value; s.innerHTML = ''; build(s); s.value = v; if (s.value !== v) s.value = ''; };
+  const cats = {}; S.catsExp.concat(S.catsInc).forEach((c) => { cats[c] = 1; }); tx.forEach((t) => { cats[t.cat] = 1; });
+  keep('f-cat', (s) => { opt(s, '', 'Todas as categorias'); Object.keys(cats).sort().forEach((c) => opt(s, c, c)); });
+  const who = {}; tx.forEach((t) => { if (t.byName) who[t.byName] = 1; });
+  keep('f-who', (s) => { opt(s, '', 'Todas as pessoas'); Object.keys(who).sort().forEach((c) => opt(s, c, c)); });
+  keep('f-acct', (s) => { opt(s, '', 'Todas as contas'); S.accts.forEach((a) => opt(s, a.id, a.name)); });
+}
 
-function bars(box, by, total, msg) {
+/* ---------- Barras (com metas) ---------- */
+function bars(box, by, total, msg, goals) {
   box.innerHTML = '';
-  const keys = Object.keys(by).sort((a, b) => by[b] - by[a]);
-  if (!keys.length) box.appendChild(el('div', 'empty', msg));
-  keys.forEach((k) => {
-    const pct = total ? Math.round(by[k] / total * 100) : 0;
+  const names = Object.keys(by);
+  if (goals) Object.keys(goals).forEach((k) => { if (names.indexOf(k) < 0) names.push(k); });
+  names.sort((a, b) => (by[b] || 0) - (by[a] || 0));
+  if (!names.length) box.appendChild(el('div', 'empty', msg));
+  names.forEach((k) => {
+    const v = by[k] || 0, g = goals && goals[k];
+    let pct, txt, cls = 'fill';
+    if (g) {
+      const r = v / g; pct = Math.min(100, Math.round(r * 100));
+      txt = brl(v) + ' de ' + brl(g) + ' · ' + Math.round(r * 100) + '%';
+      if (r > 1) cls += ' over'; else if (r >= 0.8) cls += ' warn';
+    } else { pct = total ? Math.round(v / total * 100) : 0; txt = brl(v) + ' · ' + pct + '%'; }
     const w = el('div', 'bar'), top = el('div', 'top');
-    top.appendChild(el('span', null, k)); top.appendChild(el('span', null, brl(by[k]) + ' · ' + pct + '%'));
-    const tr = el('div', 'track'), f = el('div', 'fill'); f.style.width = pct + '%'; tr.appendChild(f);
+    top.appendChild(el('span', null, k)); top.appendChild(el('span', null, txt));
+    const tr = el('div', 'track'), f = el('div', cls); f.style.width = pct + '%'; tr.appendChild(f);
     w.appendChild(top); w.appendChild(tr); box.appendChild(w);
   });
 }
 
+/* ---------- Relatório ---------- */
 function report() {
   const rows = [], all = {}; let ti = 0, te = 0, max = 1;
   for (let i = period - 1; i >= 0; i--) {
@@ -268,7 +403,6 @@ function report() {
     ti += r.inc; te += r.exp; max = Math.max(max, r.inc, r.exp); rows.push(r);
   }
   $('rplabel').textContent = 'Período: ' + mlab(rows[0].d) + ' a ' + mlab(rows[rows.length - 1].d) + ' (termina no mês selecionado)';
-
   const ch = $('chart'); ch.innerHTML = '';
   rows.forEach((r) => {
     const col = el('div', 'col'), bs = el('div', 'bars');
@@ -278,7 +412,6 @@ function report() {
     bs.appendChild(a); bs.appendChild(b); col.appendChild(bs); col.appendChild(el('small', null, mname(r.d)));
     ch.appendChild(col);
   });
-
   const tb = $('rtable'); tb.innerHTML = '';
   const hd = el('div', 'trow th');
   ['Mês', 'Salário', 'Despesas', 'Saldo'].forEach((h) => hd.appendChild(el('span', null, h)));
@@ -300,55 +433,312 @@ function report() {
     row.appendChild(el('span', s < 0 ? 'exp' : 'inc', num(s)));
     tb.appendChild(row);
   };
-  linha('Total', ti, te);
-  linha('Média', ti / period, te / period);
+  linha('Total', ti, te); linha('Média', ti / period, te / period);
   bars($('repcats'), all, te, 'Sem despesas no período.');
+}
+
+/* ---------- Telas dependentes do mês ---------- */
+function setCmp(e, now, prev) {
+  if (!prev) { e.textContent = ''; return; }
+  const p = Math.round((now - prev) / prev * 100);
+  e.textContent = (p === 0 ? '= ' : p > 0 ? '▲ ' : '▼ ') + Math.abs(p) + '% vs. mês anterior';
+}
+
+function renderAccts() {
+  const box = $('acclist'); box.innerHTML = '';
+  if (!S.accts.length) box.appendChild(el('div', 'empty', 'Nenhuma conta cadastrada.'));
+  const t0 = today(), m = ym(cur);
+  S.accts.forEach((a) => {
+    let val, lab;
+    if (a.kind === 'cartao') {
+      val = tx.filter((t) => t.acct === a.id && t.type === 'exp' && t.date.indexOf(m) === 0).reduce((s, t) => s + t.value, 0);
+      lab = 'cartão · fatura do mês';
+    } else {
+      val = (a.ini || 0) + tx.filter((t) => t.acct === a.id && t.date <= t0).reduce((s, t) => s + (t.type === 'inc' ? t.value : -t.value), 0);
+      lab = 'conta · saldo até hoje';
+    }
+    const row = el('div', 'mrow'), nm = el('span', 'nm', a.name);
+    nm.appendChild(el('small', null, lab));
+    const v = el('b', val < 0 ? 'exp' : '', brl(val));
+    row.appendChild(nm); row.appendChild(v);
+    row.appendChild(btn('✎', 'Renomear', () => {
+      const n = (prompt('Novo nome:', a.name) || '').trim(); if (!n) return;
+      a.name = n; saveSettings();
+    }));
+    row.appendChild(btn('🗑', 'Remover', () => {
+      if (!confirm('Remover "' + a.name + '"? Os lançamentos continuam, apenas sem a conta.')) return;
+      S.accts = S.accts.filter((x) => x.id !== a.id); saveSettings();
+    }));
+    box.appendChild(row);
+  });
+}
+
+function renderWho(mt) {
+  const box = $('ppl'); box.innerHTML = '';
+  const by = {};
+  mt.forEach((t) => { const n = t.byName || '—'; const r = by[n] || (by[n] = { inc: 0, exp: 0 }); if (t.type === 'inc') r.inc += t.value; else r.exp += t.value; });
+  const names = Object.keys(by).sort((a, b) => by[b].exp - by[a].exp);
+  if (!names.length) { box.appendChild(el('div', 'empty', 'Sem lançamentos neste mês.')); return; }
+  const hd = el('div', 'trow th');
+  ['Pessoa', 'Salário', 'Despesas', 'Saldo'].forEach((h) => hd.appendChild(el('span', null, h)));
+  box.appendChild(hd);
+  names.forEach((n) => {
+    const r = by[n], s = r.inc - r.exp, row = el('div', 'trow');
+    row.appendChild(el('span', null, n));
+    row.appendChild(el('span', 'inc', num(r.inc)));
+    row.appendChild(el('span', 'exp', num(r.exp)));
+    row.appendChild(el('span', s < 0 ? 'exp' : 'inc', num(s)));
+    box.appendChild(row);
+  });
+}
+
+function renderAlerts() {
+  const box = $('alerts'); box.innerHTML = '';
+  const lim = new Date(); lim.setDate(lim.getDate() + 3);
+  const limS = fmt(lim), t0 = today();
+  tx.filter((t) => t.type === 'exp' && !t.paid && t.date <= limS)
+    .sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 8).forEach((t) => {
+      const p = t.date.split('-');
+      const quando = t.date < t0 ? 'venceu em ' + p[2] + '/' + p[1] : t.date === t0 ? 'vence hoje' : 'vence ' + p[2] + '/' + p[1];
+      const row = el('div', 'alert');
+      row.appendChild(el('span', null, '🔔 ' + (t.desc || t.cat) + ' · ' + brl(t.value) + ' · ' + quando));
+      const b = el('button', 'pay', 'Pagar');
+      b.onclick = () => updateDoc(doc(db, COL, t.id), { paid: true }).catch((e) => err(e, 'Não foi possível marcar como pago'));
+      row.appendChild(b); box.appendChild(row);
+    });
+  const g = goalsMap(), by = {};
+  monthTx().forEach((t) => { if (t.type === 'exp') by[t.cat] = (by[t.cat] || 0) + t.value; });
+  Object.keys(g).forEach((k) => {
+    if ((by[k] || 0) > g[k]) box.appendChild(el('div', 'alert', '⚠️ ' + k + ' passou da meta: ' + brl(by[k]) + ' de ' + brl(g[k])));
+  });
+  $('alertbox').style.display = box.children.length ? 'block' : 'none';
+}
+
+function passFilters(t) {
+  const q = $('f-q').value.trim().toLowerCase();
+  if (q && (t.desc + ' ' + t.cat).toLowerCase().indexOf(q) < 0) return false;
+  if ($('f-cat').value && t.cat !== $('f-cat').value) return false;
+  if ($('f-who').value && t.byName !== $('f-who').value) return false;
+  if ($('f-acct').value && t.acct !== $('f-acct').value) return false;
+  return true;
+}
+
+function delTx(t) {
+  if (!confirm('Excluir este lançamento?')) return;
+  if (t.gid) {
+    const irmas = tx.filter((x) => x.gid === t.gid && x.id !== t.id);
+    if (irmas.length && confirm('Esta compra é parcelada. Excluir também as outras ' + irmas.length + ' parcelas?\n\nOK = excluir todas\nCancelar = excluir só esta')) {
+      commitAll(irmas.concat([t]).map((x) => ({ del: true, ref: doc(db, COL, x.id) }))).catch((e) => err(e, 'Não foi possível excluir'));
+      return;
+    }
+  }
+  deleteDoc(doc(db, COL, t.id)).catch((e) => err(e, 'Não foi possível excluir'));
+}
+
+function renderList(mt) {
+  const l = $('list'); l.innerHTML = '';
+  const list = mt.filter(passFilters).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.ts - a.ts));
+  $('lcount').textContent = '(' + list.length + ')';
+  if (!list.length) l.appendChild(el('div', 'empty', mt.length ? 'Nenhum lançamento com esses filtros.' : 'Nenhum lançamento neste mês.'));
+  list.forEach((t) => {
+    const it = el('div', 'item'), tt = el('div', 't');
+    const p = t.date.split('-');
+    const titulo = el('div', null, t.desc || t.cat);
+    if (t.instTotal > 1) titulo.appendChild(el('span', 'tag', t.instN + '/' + t.instTotal));
+    if (t.recId) titulo.appendChild(el('span', 'tag', '↻'));
+    if (t.type === 'exp' && !t.paid) titulo.appendChild(el('span', 'tag', 'a pagar'));
+    tt.appendChild(titulo);
+    const conta = acctName(t.acct);
+    tt.appendChild(el('small', null, t.cat + ' · ' + p[2] + '/' + p[1] + (t.byName ? ' · ' + t.byName : '') + (conta ? ' · ' + conta : '')));
+    tt.style.cursor = 'pointer'; tt.onclick = () => openSheet(t);
+    const v = el('div', t.type === 'inc' ? 'inc' : 'exp', (t.type === 'inc' ? '+ ' : '− ') + brl(t.value));
+    v.style.fontWeight = '600';
+    it.appendChild(tt); it.appendChild(v);
+    const ed = btn('✎', 'Editar', () => openSheet(t)); ed.className = 'edit'; it.appendChild(ed);
+    const d = btn('×', 'Excluir', () => delTx(t)); d.className = 'del';
+    it.appendChild(d); l.appendChild(it);
+  });
 }
 
 function render() {
   $('mlabel').textContent = cur.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  const m = ym(cur);
-  const list = tx.filter((t) => t.date.indexOf(m) === 0)
-    .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0));
-  let inc = 0, exp = 0; const by = {};
-  list.forEach((t) => {
-    if (t.type === 'inc') inc += t.value; else { exp += t.value; by[t.cat] = (by[t.cat] || 0) + t.value; }
-  });
-  $('inc').textContent = brl(inc); $('exp').textContent = brl(exp);
-  const bal = inc - exp, b = $('bal'); b.textContent = brl(bal); b.className = 'val ' + (bal < 0 ? 'exp' : 'inc');
+  const m = ym(cur), pm = ym(new Date(cur.getFullYear(), cur.getMonth() - 1, 1));
+  const sum = (arr) => { const r = { inc: 0, exp: 0, by: {} }; arr.forEach((t) => { if (t.type === 'inc') r.inc += t.value; else { r.exp += t.value; r.by[t.cat] = (r.by[t.cat] || 0) + t.value; } }); return r; };
+  const mt = tx.filter((t) => t.date.indexOf(m) === 0), cs = sum(mt), ps = sum(tx.filter((t) => t.date.indexOf(pm) === 0));
+  $('inc').textContent = brl(cs.inc); $('exp').textContent = brl(cs.exp);
+  const bal = cs.inc - cs.exp, b = $('bal'); b.textContent = brl(bal); b.className = 'val ' + (bal < 0 ? 'exp' : 'inc');
+  setCmp($('inc-cmp'), cs.inc, ps.inc); setCmp($('exp-cmp'), cs.exp, ps.exp);
+  bars($('cats'), cs.by, cs.exp, 'Sem despesas neste mês.', goalsMap());
+  renderWho(mt); renderAccts(); renderAlerts(); renderList(mt); report();
+}
 
-  bars($('cats'), by, exp, 'Sem despesas neste mês.');
-  report();
+/* ---------- Configurações: categorias, metas, recorrentes ---------- */
+function saveSettings() {
+  setDoc(doc(db, 'settings', 'main'), S).catch((e) => err(e, 'Não foi possível salvar as configurações'));
+  renderSettings(); render();
+}
 
-  const l = $('list'); l.innerHTML = '';
-  if (!list.length) l.appendChild(el('div', 'empty', 'Nenhum lançamento neste mês.'));
-  list.forEach((t) => {
-    const it = el('div', 'item'), tt = el('div', 't');
-    const p = t.date.split('-');
-    tt.appendChild(el('div', null, t.desc || t.cat));
-    tt.appendChild(el('small', null, t.cat + ' · ' + p[2] + '/' + p[1] + (t.byName ? ' · ' + t.byName : '')));
-    const v = el('div', t.type === 'inc' ? 'inc' : 'exp', (t.type === 'inc' ? '+ ' : '− ') + brl(t.value));
-    v.style.fontWeight = '600';
-    const ed = el('button', 'edit', '✎'); ed.setAttribute('aria-label', 'Editar');
-    ed.onclick = () => openEdit(t);
-    tt.style.cursor = 'pointer'; tt.onclick = () => openEdit(t);
-    const d = el('button', 'del', '×'); d.setAttribute('aria-label', 'Excluir');
-    d.onclick = () => {
-      if (confirm('Excluir este lançamento?')) {
-        deleteDoc(doc(db, COL, t.id)).catch(() => alert('Não foi possível excluir. Tente de novo.'));
-      }
-    };
-    it.appendChild(tt); it.appendChild(v); it.appendChild(ed); it.appendChild(d); l.appendChild(it);
+function renderCats() {
+  const box = $('cm-list'); box.innerHTML = '';
+  $('cm-exp').className = cmTp === 'exp' ? 'on' : ''; $('cm-inc').className = cmTp === 'inc' ? 'on' : '';
+  $('cm-note').style.display = cmTp === 'exp' ? 'block' : 'none';
+  const gm = goalsMap();
+  catsOf(cmTp).forEach((name) => {
+    const row = el('div', 'mrow'); row.appendChild(el('span', 'nm', name));
+    if (cmTp === 'exp') {
+      const inp = document.createElement('input'); inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = 'Meta R$';
+      inp.value = gm[name] ? String(gm[name]).replace('.', ',') : '';
+      inp.onchange = () => {
+        const v = parseMoney(inp.value);
+        S.goals = S.goals.filter((g) => g.cat !== name);
+        if (v > 0) S.goals.push({ cat: name, limit: round2(v) });
+        saveSettings();
+      };
+      row.appendChild(inp);
+    }
+    row.appendChild(btn('✎', 'Renomear', () => renameCat(name)));
+    row.appendChild(btn('🗑', 'Remover', () => {
+      if (!confirm('Remover "' + name + '" da lista? Lançamentos antigos mantêm o nome.')) return;
+      const arr = catsOf(cmTp); arr.splice(arr.indexOf(name), 1);
+      if (cmTp === 'exp') S.goals = S.goals.filter((g) => g.cat !== name);
+      saveSettings();
+    }));
+    box.appendChild(row);
   });
 }
 
-function setType(t) {
-  type = t;
-  $('t-exp').className = t === 'exp' ? 'on' : '';
-  $('t-inc').className = t === 'inc' ? 'on' : '';
-  fillCats();
+function renameCat(old) {
+  const nv = (prompt('Novo nome da categoria:', old) || '').trim();
+  if (!nv || nv === old) return;
+  const arr = catsOf(cmTp);
+  if (arr.indexOf(nv) >= 0) { alert('Já existe uma categoria com esse nome.'); return; }
+  arr[arr.indexOf(old)] = nv;
+  if (cmTp === 'exp') S.goals.forEach((g) => { if (g.cat === old) g.cat = nv; });
+  const aff = tx.filter((t) => t.type === cmTp && t.cat === old), affR = rec.filter((r) => r.type === cmTp && r.cat === old);
+  if ((aff.length || affR.length) && confirm('Renomear também nos ' + aff.length + ' lançamentos já feitos?')) {
+    commitAll(aff.map((t) => ({ upd: { cat: nv }, ref: doc(db, COL, t.id) })).concat(affR.map((r) => ({ upd: { cat: nv }, ref: doc(db, RECCOL, r.id) }))))
+      .catch((e) => err(e, 'Não foi possível renomear nos lançamentos'));
+  }
+  saveSettings();
 }
 
+function renderRec() {
+  const box = $('rec-list'); box.innerHTML = '';
+  if (!rec.length) box.appendChild(el('div', 'empty', 'Nenhum lançamento recorrente.'));
+  rec.slice().sort((a, b) => a.day - b.day).forEach((r) => {
+    const row = el('div', 'mrow'), nm = el('span', 'nm', (r.desc || r.cat) + (r.active === false ? ' (pausado)' : ''));
+    nm.appendChild(el('small', null, (r.type === 'inc' ? 'Salário' : 'Despesa') + ' · ' + r.cat + ' · todo dia ' + r.day));
+    row.appendChild(nm); row.appendChild(el('b', r.type === 'inc' ? 'inc' : 'exp', brl(r.value)));
+    row.appendChild(btn('✎', 'Alterar valor', () => {
+      const v = parseMoney(prompt('Novo valor mensal (vale a partir do próximo mês gerado):', String(r.value).replace('.', ',')) || '');
+      if (v > 0) updateDoc(doc(db, RECCOL, r.id), { value: round2(v) }).catch((e) => err(e, 'Não foi possível alterar'));
+    }));
+    row.appendChild(btn(r.active === false ? '▶' : '⏸', 'Pausar ou retomar', () => {
+      if (r.active === false) {
+        const n = new Date(); const prev = ym(new Date(n.getFullYear(), n.getMonth() - 1, 1));
+        updateDoc(doc(db, RECCOL, r.id), { active: true, lastGen: prev }).catch((e) => err(e, 'Não foi possível retomar'));
+      } else updateDoc(doc(db, RECCOL, r.id), { active: false }).catch((e) => err(e, 'Não foi possível pausar'));
+    }));
+    row.appendChild(btn('🗑', 'Excluir', () => {
+      if (confirm('Excluir esta recorrência? Os lançamentos já criados continuam.')) deleteDoc(doc(db, RECCOL, r.id)).catch((e) => err(e, 'Não foi possível excluir'));
+    }));
+    box.appendChild(row);
+  });
+}
+
+function renderSettings() { renderCats(); renderRec(); fillFilters(); }
+
+async function genRecurring(list) {
+  if (gen || !user) return;
+  const nowYm = ym(new Date()), t0 = today(), ops = [];
+  list.forEach((r) => {
+    if (r.active === false || !r.start) return;
+    let m = r.lastGen ? nextYm(r.lastGen) : r.start;
+    if (r.start > m) m = r.start;
+    if (m > nowYm) return;
+    let last = r.lastGen || '', n = 0;
+    while (m <= nowYm && n < 36) {
+      const date = dateIn(m, r.day || 1);
+      ops.push({ ref: doc(db, COL, 'rec_' + r.id + '_' + m), set: { type: r.type, value: r.value, desc: r.desc || '', cat: r.cat, date: date, acct: r.acct || '', paid: r.type === 'inc' || date < t0, by: r.by, byName: r.byName, ts: Date.now(), recId: r.id } });
+      last = m; m = nextYm(m); n++;
+    }
+    if (last) ops.push({ ref: doc(db, RECCOL, r.id), upd: { lastGen: last } });
+  });
+  if (!ops.length) return;
+  gen = true;
+  try { await commitAll(ops); } catch (e) { /* tenta de novo na próxima abertura */ } finally { gen = false; }
+}
+
+/* ---------- Folha de lançamento (novo / editar) ---------- */
+function lastCat(tp) {
+  try { const o = JSON.parse(localStorage.getItem(LASTCAT_KEY) || '{}'); return catsOf(tp).indexOf(o[tp]) >= 0 ? o[tp] : undefined; } catch (e) { return undefined; }
+}
+function rememberCat(tp, c) {
+  try { const o = JSON.parse(localStorage.getItem(LASTCAT_KEY) || '{}'); o[tp] = c; localStorage.setItem(LASTCAT_KEY, JSON.stringify(o)); } catch (e) {}
+}
+function setEType(tp, val) {
+  etype = tp;
+  $('e-exp').className = tp === 'exp' ? 'on' : ''; $('e-inc').className = tp === 'inc' ? 'on' : '';
+  fillSel($('e-cat'), tp, val);
+  $('e-paidwrap').style.display = tp === 'exp' ? 'flex' : 'none';
+}
+function updInstNote() {
+  const n = parseInt($('e-inst').value, 10) || 1, v = parseMoney($('e-amount').value);
+  $('e-instnote').textContent = (n > 1 && v > 0) ? 'Valor total dividido em ' + n + 'x de ' + brl(splitInst(v, n)[0]) + ' (a última ajusta os centavos).' : (n > 1 ? 'Informe o valor total da compra.' : '');
+}
+function openSheet(t) {
+  editing = t || null;
+  $('s-title').textContent = t ? 'Editar lançamento' : 'Novo lançamento';
+  $('e-addonly').style.display = t ? 'none' : 'block';
+  $('e-amount').value = t ? t.value.toFixed(2).replace('.', ',') : '';
+  $('e-desc').value = t ? t.desc : '';
+  $('e-date').value = t ? t.date : today();
+  fillAcct($('e-acct'), t && t.acct);
+  $('e-paid').checked = t ? t.paid : true;
+  $('e-inst').value = 1; $('e-inst').disabled = false; $('e-rec').checked = false; $('e-instnote').textContent = '';
+  const tp = t ? t.type : 'exp';
+  setEType(tp, t ? t.cat : lastCat(tp));
+  $('e-err').textContent = '';
+  $('ov').style.display = 'flex';
+  if (!t) setTimeout(() => $('e-amount').focus(), 60);
+}
+function closeSheet() { editing = null; $('ov').style.display = 'none'; }
+
+function saveSheet() {
+  if (!user) return;
+  const v = parseMoney($('e-amount').value);
+  if (!(v > 0)) { $('e-err').textContent = 'Informe um valor maior que zero.'; return; }
+  const date = $('e-date').value;
+  if (!date) { $('e-err').textContent = 'Informe a data.'; return; }
+  const desc = $('e-desc').value.trim(), cat = $('e-cat').value, acct = $('e-acct').value;
+  const paid = etype === 'inc' ? true : $('e-paid').checked;
+  const by = user.uid, byName = firstName(user), ts = Date.now();
+  rememberCat(etype, cat);
+  if (editing) {
+    updateDoc(doc(db, COL, editing.id), { type: etype, value: round2(v), desc: desc, cat: cat, date: date, acct: acct, paid: paid })
+      .catch((e) => err(e, 'Não foi possível salvar a edição'));
+  } else if ($('e-rec').checked) {
+    addDoc(collection(db, RECCOL), { type: etype, value: round2(v), desc: desc, cat: cat, day: Number(date.slice(8, 10)), acct: acct, by: by, byName: byName, start: date.slice(0, 7), active: true, ts: ts })
+      .catch((e) => err(e, 'Não foi possível criar a recorrência'));
+  } else {
+    const n = Math.min(48, Math.max(1, parseInt($('e-inst').value, 10) || 1));
+    if (n > 1) {
+      if (Math.round(v * 100) < n) { $('e-err').textContent = 'Valor pequeno demais para tantas parcelas.'; return; }
+      const gid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6), vals = splitInst(v, n), t0 = today();
+      commitAll(vals.map((val, i) => {
+        const d = addM(date, i);
+        return { ref: doc(collection(db, COL)), set: { type: etype, value: val, desc: desc, cat: cat, date: d, acct: acct, paid: etype === 'inc' || d <= t0, by: by, byName: byName, ts: ts + i, gid: gid, instN: i + 1, instTotal: n } };
+      })).catch((e) => err(e, 'Não foi possível salvar as parcelas'));
+    } else {
+      addDoc(collection(db, COL), { type: etype, value: round2(v), desc: desc, cat: cat, date: date, acct: acct, paid: paid, by: by, byName: byName, ts: ts })
+        .catch((e) => err(e, 'Não foi possível salvar'));
+    }
+  }
+  const d = new Date(date + 'T00:00:00'); cur = new Date(d.getFullYear(), d.getMonth(), 1);
+  closeSheet(); render();
+}
+
+/* ---------- Importação do app antigo ---------- */
 function oldData() {
   try { const r = localStorage.getItem(OLD_KEY); const a = r ? JSON.parse(r) : []; return Array.isArray(a) ? a : []; } catch (e) { return []; }
 }
@@ -360,44 +750,54 @@ function checkImport() {
   $('importn').textContent = old.length;
 }
 
+/* ---------- Dados em tempo real ---------- */
+function onErr(e) {
+  if (e && e.code === 'permission-denied') {
+    $('deniedmsg').textContent = 'A conta ' + (user ? user.email : '') + ' não tem permissão para ver estes dados. Entre com um dos e-mails liberados nas regras do Firestore. Se você acabou de atualizar o app, confira também se as regras novas foram publicadas.';
+    show('denied');
+  } else { $('sync').textContent = '⚠️ Erro de conexão'; }
+}
 function startListening() {
-  unsub = onSnapshot(collection(db, COL), { includeMetadataChanges: true }, (snap) => {
+  const uns = [];
+  uns.push(onSnapshot(collection(db, COL), { includeMetadataChanges: true }, (snap) => {
     tx = snap.docs.map((d) => {
       const x = d.data();
-      return { id: d.id, type: x.type === 'inc' ? 'inc' : 'exp', value: Number(x.value) || 0, desc: String(x.desc || ''),
-               cat: String(x.cat || 'Outros'), date: String(x.date || ''), byName: String(x.byName || ''), ts: Number(x.ts) || 0 };
+      return { id: d.id, type: x.type === 'inc' ? 'inc' : 'exp', value: Number(x.value) || 0, desc: String(x.desc || ''), cat: String(x.cat || 'Outros'),
+               date: String(x.date || ''), byName: String(x.byName || ''), ts: Number(x.ts) || 0, acct: String(x.acct || ''), paid: x.paid !== false,
+               gid: String(x.gid || ''), instN: Number(x.instN) || 0, instTotal: Number(x.instTotal) || 0, recId: String(x.recId || '') };
     }).filter((t) => t.date.length === 10);
     pending = snap.metadata.hasPendingWrites;
-    setSync(); render(); checkImport();
-  }, (err) => {
-    if (err.code === 'permission-denied') {
-      $('deniedmsg').textContent = 'A conta ' + (user ? user.email : '') + ' não tem permissão para ver estes dados. Entre com um dos e-mails liberados nas regras do Firestore.';
-      show('denied');
-    } else {
-      $('sync').textContent = '⚠️ Erro de conexão';
-    }
-  });
+    setSync(); fillFilters(); render(); checkImport();
+  }, onErr));
+  uns.push(onSnapshot(collection(db, RECCOL), { includeMetadataChanges: true }, (snap) => {
+    rec = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+    renderRec();
+    if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites) genRecurring(rec);
+  }, onErr));
+  uns.push(onSnapshot(doc(db, 'settings', 'main'), (snap) => {
+    S = Object.assign(clone(DEF), snap.exists() ? snap.data() : {});
+    renderSettings(); render();
+  }, onErr));
+  unsub = () => uns.forEach((u) => u());
 }
 
 onAuthStateChanged(auth, (u) => {
   user = u;
   if (unsub) { unsub(); unsub = null; }
-  tx = [];
+  tx = []; rec = []; S = clone(DEF);
   if (!u) { show('login'); return; }
   $('who').textContent = 'Olá, ' + firstName(u);
   show('app');
-  setSync(); render(); checkImport();
+  setSync(); renderSettings(); render(); checkImport();
   startListening();
 });
 
+/* ---------- Eventos ---------- */
 $('signin').onclick = async () => {
   $('loginerr').textContent = '';
-  try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch (e) {
-    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-      $('loginerr').textContent = 'Não foi possível entrar (' + (e.code || 'erro') + ').';
-    }
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) {
+    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') $('loginerr').textContent = 'Não foi possível entrar (' + (e.code || 'erro') + ').';
   }
 };
 $('signout').onclick = () => signOut(auth);
@@ -405,8 +805,6 @@ $('signout2').onclick = () => signOut(auth);
 window.addEventListener('online', setSync);
 window.addEventListener('offline', setSync);
 
-$('t-exp').onclick = () => setType('exp');
-$('t-inc').onclick = () => setType('inc');
 $('prev').onclick = () => { cur.setMonth(cur.getMonth() - 1); render(); };
 $('next').onclick = () => { cur.setMonth(cur.getMonth() + 1); render(); };
 document.querySelectorAll('#periods button').forEach((b) => {
@@ -416,56 +814,50 @@ document.querySelectorAll('#periods button').forEach((b) => {
     report();
   };
 });
+['f-q', 'f-cat', 'f-who', 'f-acct'].forEach((id) => { $(id).oninput = () => renderList(monthTx()); $(id).onchange = () => renderList(monthTx()); });
 
-$('add').onclick = () => {
-  if (!user) return;
-  const raw = $('amount').value.trim().replace(/\./g, '').replace(',', '.');
-  const v = parseFloat(raw);
-  if (!(v > 0)) { $('err').textContent = 'Informe um valor maior que zero.'; return; }
-  const date = $('date').value || today();
-  $('err').textContent = '';
-  const rec = { type: type, value: Math.round(v * 100) / 100, desc: $('desc').value.trim(), cat: $('cat').value,
-                date: date, by: user.uid, byName: firstName(user), ts: Date.now() };
-  addDoc(collection(db, COL), rec).catch((e) => { $('err').textContent = 'Não foi possível salvar (' + (e.code || 'erro') + ').'; });
-  $('amount').value = ''; $('desc').value = '';
-  const d = new Date(date + 'T00:00:00'); cur = new Date(d.getFullYear(), d.getMonth(), 1);
-  render();
-};
-
-let editing = null, etype = 'exp';
-function setEType(tp, val) {
-  etype = tp;
-  $('e-exp').className = tp === 'exp' ? 'on' : '';
-  $('e-inc').className = tp === 'inc' ? 'on' : '';
-  fillSel($('e-cat'), tp, val);
-}
-function openEdit(t) {
-  editing = t;
-  $('e-amount').value = t.value.toFixed(2).replace('.', ',');
-  $('e-desc').value = t.desc;
-  $('e-date').value = t.date;
-  $('e-err').textContent = '';
-  setEType(t.type, t.cat);
-  $('ov').style.display = 'flex';
-}
-function closeEdit() { editing = null; $('ov').style.display = 'none'; }
+$('fab').onclick = () => openSheet(null);
 $('e-exp').onclick = () => setEType('exp');
 $('e-inc').onclick = () => setEType('inc');
-$('e-cancel').onclick = closeEdit;
-$('ov').onclick = (ev) => { if (ev.target === $('ov')) closeEdit(); };
-$('e-save').onclick = () => {
-  if (!editing) return;
-  const raw = $('e-amount').value.trim().replace(/\./g, '').replace(',', '.');
-  const v = parseFloat(raw);
-  if (!(v > 0)) { $('e-err').textContent = 'Informe um valor maior que zero.'; return; }
-  const date = $('e-date').value;
-  if (!date) { $('e-err').textContent = 'Informe a data.'; return; }
-  const alvo = editing.id;
-  updateDoc(doc(db, COL, alvo), { type: etype, value: Math.round(v * 100) / 100, desc: $('e-desc').value.trim(), cat: $('e-cat').value, date: date })
-    .catch((e) => alert('Não foi possível salvar a edição (' + (e.code || 'erro') + ').'));
-  const d = new Date(date + 'T00:00:00'); cur = new Date(d.getFullYear(), d.getMonth(), 1);
-  closeEdit();
-  render();
+$('e-cancel').onclick = closeSheet;
+$('ov').onclick = (ev) => { if (ev.target === $('ov')) closeSheet(); };
+$('e-save').onclick = saveSheet;
+$('e-date').onchange = () => { $('e-paid').checked = $('e-date').value <= today(); };
+$('e-amount').oninput = updInstNote;
+$('e-inst').oninput = updInstNote;
+$('e-rec').onchange = () => {
+  const r = $('e-rec').checked;
+  if (r) $('e-inst').value = 1;
+  $('e-inst').disabled = r; updInstNote();
+};
+
+$('cm-exp').onclick = () => { cmTp = 'exp'; renderCats(); };
+$('cm-inc').onclick = () => { cmTp = 'inc'; renderCats(); };
+$('cm-add').onclick = () => {
+  const n = $('cm-new').value.trim(); if (!n) return;
+  if (catsOf(cmTp).indexOf(n) >= 0) { alert('Essa categoria já existe.'); return; }
+  catsOf(cmTp).push(n); $('cm-new').value = ''; saveSettings();
+};
+$('a-add').onclick = () => {
+  const n = $('a-name').value.trim(); if (!n) return;
+  const ini = parseMoney($('a-ini').value);
+  S.accts.push({ id: 'a' + Date.now().toString(36), name: n, kind: $('a-kind').value, ini: isNaN(ini) ? 0 : round2(ini) });
+  $('a-name').value = ''; $('a-ini').value = ''; saveSettings();
+};
+
+$('exp-csv').onclick = () => {
+  const cel = (c) => { let s = String(c == null ? '' : c); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+  const rows = [['Data', 'Tipo', 'Categoria', 'Descrição', 'Valor', 'Conta', 'Quem', 'Parcela', 'Pago']];
+  tx.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.ts - b.ts)).forEach((t) => {
+    rows.push([t.date.split('-').reverse().join('/'), t.type === 'inc' ? 'Salário' : 'Despesa', t.cat, t.desc, t.value.toFixed(2).replace('.', ','),
+               acctName(t.acct), t.byName, t.instTotal > 1 ? t.instN + '/' + t.instTotal : '', t.type === 'exp' ? (t.paid ? 'Sim' : 'Não') : '']);
+  });
+  const csv = '\uFEFF' + rows.map((r) => r.map(cel).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'financas-' + today() + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 };
 
 $('importbtn').onclick = async () => {
@@ -473,29 +865,19 @@ $('importbtn').onclick = async () => {
   const old = oldData().filter((t) => Number(t.value) > 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(t.date)));
   if (!old.length) return;
   if (!confirm('Importar ' + old.length + ' lançamentos deste aparelho para o app compartilhado? Faça isso só uma vez.')) return;
-  const btn = $('importbtn'); btn.disabled = true; $('importmsg').textContent = 'Importando…';
+  const b = $('importbtn'); b.disabled = true; $('importmsg').textContent = 'Importando…';
   try {
-    for (let i = 0; i < old.length; i += 400) {
-      const batch = writeBatch(db);
-      old.slice(i, i + 400).forEach((t) => {
-        batch.set(doc(collection(db, COL)), {
-          type: t.type === 'inc' ? 'inc' : 'exp', value: Math.round(Number(t.value) * 100) / 100, desc: String(t.desc || ''),
-          cat: String(t.cat || 'Outros'), date: String(t.date), by: user.uid, byName: firstName(user), ts: Number(t.id) || Date.now()
-        });
-      });
-      await batch.commit();
-    }
+    await commitAll(old.map((t) => ({ ref: doc(collection(db, COL)), set: {
+      type: t.type === 'inc' ? 'inc' : 'exp', value: round2(Number(t.value)), desc: String(t.desc || ''), cat: String(t.cat || 'Outros'),
+      date: String(t.date), by: user.uid, byName: firstName(user), ts: Number(t.id) || Date.now() } })));
     try { localStorage.setItem(IMPORTED_KEY, '1'); } catch (e) {}
-    $('importmsg').textContent = '';
-    checkImport();
+    $('importmsg').textContent = ''; checkImport();
   } catch (e) {
-    $('importmsg').textContent = 'Falhou (' + (e.code || 'erro') + '). Verifique a conexão e tente de novo.';
-    btn.disabled = false;
+    $('importmsg').textContent = 'Falhou (' + ((e && e.code) || 'erro') + '). Verifique a conexão e tente de novo.';
+    b.disabled = false;
   }
 };
 
-$('date').value = today();
-fillCats();
 show('boot');
 </script>
 
