@@ -74,6 +74,10 @@ h2{font-size:15px;margin:0 0 10px}
 .who{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:12px}
 .link{background:none;border:0;color:var(--accent);padding:4px 0;font-size:13px}
 .item small b{font-weight:600}
+.edit{background:none;border:0;color:var(--muted);font-size:17px;padding:4px 6px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.sheet{background:var(--card);color:var(--text);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:100%;overflow-y:auto}
+.ghost{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-weight:600}
 </style>
 </head>
 <body>
@@ -115,14 +119,14 @@ h2{font-size:15px;margin:0 0 10px}
 
     <div class="card sum">
       <div class="full"><div class="lbl">Saldo do mês</div><div class="val" id="bal"></div></div>
-      <div><div class="lbl">Receitas</div><div class="val inc" id="inc"></div></div>
+      <div><div class="lbl">Salário</div><div class="val inc" id="inc"></div></div>
       <div><div class="lbl">Despesas</div><div class="val exp" id="exp"></div></div>
     </div>
 
     <div class="card">
       <div class="seg">
         <button id="t-exp" class="on">Despesa</button>
-        <button id="t-inc">Receita</button>
+        <button id="t-inc">Salário</button>
       </div>
       <input id="amount" type="text" inputmode="decimal" placeholder="Valor (ex.: 25,90)" autocomplete="off">
       <input id="desc" type="text" placeholder="Descrição (opcional)" autocomplete="off">
@@ -147,7 +151,7 @@ h2{font-size:15px;margin:0 0 10px}
         <button data-n="12">12 meses</button>
       </div>
       <p class="note" id="rplabel"></p>
-      <div class="legend"><span><i style="background:var(--inc)"></i>Receitas</span><span><i style="background:var(--exp)"></i>Despesas</span></div>
+      <div class="legend"><span><i style="background:var(--inc)"></i>Salário</span><span><i style="background:var(--exp)"></i>Despesas</span></div>
       <div class="chart" id="chart"></div>
       <div id="rtable"></div>
       <h3 class="sub">Despesas por categoria no período</h3>
@@ -162,10 +166,31 @@ h2{font-size:15px;margin:0 0 10px}
   </div>
 </main>
 
+<div class="ov" id="ov">
+  <div class="sheet">
+    <h2>Editar lançamento</h2>
+    <div class="seg">
+      <button id="e-exp" class="on">Despesa</button>
+      <button id="e-inc">Salário</button>
+    </div>
+    <input id="e-amount" type="text" inputmode="decimal" placeholder="Valor (ex.: 25,90)" autocomplete="off">
+    <input id="e-desc" type="text" placeholder="Descrição (opcional)" autocomplete="off">
+    <div class="row">
+      <select id="e-cat"></select>
+      <input id="e-date" type="date">
+    </div>
+    <p class="err" id="e-err"></p>
+    <div class="row">
+      <button class="ghost" id="e-cancel">Cancelar</button>
+      <button class="add" id="e-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, deleteDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCxJ2z4IFq5TuOnkRDzJhec3G8EGdjd7Ok",
@@ -210,10 +235,14 @@ function setSync() {
   $('sync').textContent = !navigator.onLine ? '📴 Offline' : (pending ? '⏳ Sincronizando…' : '✓ Sincronizado');
 }
 
-function fillCats() {
-  const s = $('cat'); s.innerHTML = '';
-  CATS[type].forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; s.appendChild(o); });
+function fillSel(sel, tp, val) {
+  sel.innerHTML = '';
+  const lista = CATS[tp].slice();
+  if (val && lista.indexOf(val) < 0) lista.push(val);
+  lista.forEach((c) => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+  if (val) sel.value = val;
 }
+function fillCats() { fillSel($('cat'), type); }
 
 function bars(box, by, total, msg) {
   box.innerHTML = '';
@@ -252,7 +281,7 @@ function report() {
 
   const tb = $('rtable'); tb.innerHTML = '';
   const hd = el('div', 'trow th');
-  ['Mês', 'Receitas', 'Despesas', 'Saldo'].forEach((h) => hd.appendChild(el('span', null, h)));
+  ['Mês', 'Salário', 'Despesas', 'Saldo'].forEach((h) => hd.appendChild(el('span', null, h)));
   tb.appendChild(hd);
   rows.slice().reverse().forEach((r) => {
     const row = el('div', 'trow click'), s = r.inc - r.exp;
@@ -300,13 +329,16 @@ function render() {
     tt.appendChild(el('small', null, t.cat + ' · ' + p[2] + '/' + p[1] + (t.byName ? ' · ' + t.byName : '')));
     const v = el('div', t.type === 'inc' ? 'inc' : 'exp', (t.type === 'inc' ? '+ ' : '− ') + brl(t.value));
     v.style.fontWeight = '600';
+    const ed = el('button', 'edit', '✎'); ed.setAttribute('aria-label', 'Editar');
+    ed.onclick = () => openEdit(t);
+    tt.style.cursor = 'pointer'; tt.onclick = () => openEdit(t);
     const d = el('button', 'del', '×'); d.setAttribute('aria-label', 'Excluir');
     d.onclick = () => {
       if (confirm('Excluir este lançamento?')) {
         deleteDoc(doc(db, COL, t.id)).catch(() => alert('Não foi possível excluir. Tente de novo.'));
       }
     };
-    it.appendChild(tt); it.appendChild(v); it.appendChild(d); l.appendChild(it);
+    it.appendChild(tt); it.appendChild(v); it.appendChild(ed); it.appendChild(d); l.appendChild(it);
   });
 }
 
@@ -397,6 +429,42 @@ $('add').onclick = () => {
   addDoc(collection(db, COL), rec).catch((e) => { $('err').textContent = 'Não foi possível salvar (' + (e.code || 'erro') + ').'; });
   $('amount').value = ''; $('desc').value = '';
   const d = new Date(date + 'T00:00:00'); cur = new Date(d.getFullYear(), d.getMonth(), 1);
+  render();
+};
+
+let editing = null, etype = 'exp';
+function setEType(tp, val) {
+  etype = tp;
+  $('e-exp').className = tp === 'exp' ? 'on' : '';
+  $('e-inc').className = tp === 'inc' ? 'on' : '';
+  fillSel($('e-cat'), tp, val);
+}
+function openEdit(t) {
+  editing = t;
+  $('e-amount').value = t.value.toFixed(2).replace('.', ',');
+  $('e-desc').value = t.desc;
+  $('e-date').value = t.date;
+  $('e-err').textContent = '';
+  setEType(t.type, t.cat);
+  $('ov').style.display = 'flex';
+}
+function closeEdit() { editing = null; $('ov').style.display = 'none'; }
+$('e-exp').onclick = () => setEType('exp');
+$('e-inc').onclick = () => setEType('inc');
+$('e-cancel').onclick = closeEdit;
+$('ov').onclick = (ev) => { if (ev.target === $('ov')) closeEdit(); };
+$('e-save').onclick = () => {
+  if (!editing) return;
+  const raw = $('e-amount').value.trim().replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(raw);
+  if (!(v > 0)) { $('e-err').textContent = 'Informe um valor maior que zero.'; return; }
+  const date = $('e-date').value;
+  if (!date) { $('e-err').textContent = 'Informe a data.'; return; }
+  const alvo = editing.id;
+  updateDoc(doc(db, COL, alvo), { type: etype, value: Math.round(v * 100) / 100, desc: $('e-desc').value.trim(), cat: $('e-cat').value, date: date })
+    .catch((e) => alert('Não foi possível salvar a edição (' + (e.code || 'erro') + ').'));
+  const d = new Date(date + 'T00:00:00'); cur = new Date(d.getFullYear(), d.getMonth(), 1);
+  closeEdit();
   render();
 };
 

@@ -1,6 +1,6 @@
 // Service worker: guarda os arquivos do app (e o SDK do Firebase) para abrir offline.
 // Arquivos do app são atualizados em segundo plano: a versão nova aparece na abertura seguinte.
-const CACHE = 'financas-v3';
+const CACHE = 'financas-v4';
 const ARQUIVOS = [
   './',
   './index.html',
